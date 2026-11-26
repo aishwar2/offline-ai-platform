@@ -50,22 +50,28 @@ export function Sidebar({
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <div className="p-3 flex items-center gap-2 border-b border-slate-800 dark:border-zinc-800">
+      <div className="p-3 space-y-2 border-b border-slate-800 dark:border-zinc-800">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <img src="./logo.svg" alt="Offline AI Logo" className="h-6 w-6 rounded-md" />
+            <span className="text-sm font-semibold tracking-tight">Offline AI</span>
+          </div>
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            className="md:hidden p-1.5 rounded-lg hover:bg-slate-800"
+            aria-label="Close sidebar"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
         <button
           type="button"
           onClick={onNewChat}
-          className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-slate-700 hover:bg-slate-800 py-2 px-3 text-sm font-medium transition"
+          className="w-full flex items-center justify-center gap-2 rounded-lg border border-slate-700 hover:bg-slate-800 py-2 px-3 text-sm font-medium transition"
         >
           <Plus className="h-4 w-4" />
           New Chat
-        </button>
-        <button
-          type="button"
-          onClick={onCloseMobile}
-          className="md:hidden p-2 rounded-lg hover:bg-slate-800"
-          aria-label="Close sidebar"
-        >
-          <X className="h-4 w-4" />
         </button>
       </div>
 

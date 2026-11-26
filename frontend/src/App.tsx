@@ -3,11 +3,17 @@ import { AuthView } from "./components/AuthView";
 import { ChatWorkspace } from "./components/ChatWorkspace";
 import { SettingsView } from "./components/SettingsView";
 import { Sidebar } from "./components/Sidebar";
-import { api } from "./services/api";
+import { api, isDemoMode, setDemoMode } from "./services/api";
 import type { Conversation, ConversationDetail, ModelInfo, User } from "./types/api";
 
 export function App() {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("auth_token"));
+  const [token, setToken] = useState<string | null>(() => {
+    if (isDemoMode()) {
+      setDemoMode(true);
+      return "demo-jwt-token";
+    }
+    return localStorage.getItem("auth_token");
+  });
   const [user, setUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<ConversationDetail | null>(null);
@@ -158,6 +164,7 @@ export function App() {
   }
 
   function handleLogout() {
+    setDemoMode(false);
     localStorage.removeItem("auth_token");
     setToken(null);
     setUser(null);
@@ -170,51 +177,69 @@ export function App() {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      <Sidebar
-        user={user}
-        conversations={conversations}
-        activeId={activeConversation?.id || null}
-        activeTab={activeTab}
-        darkMode={darkMode}
-        mobileOpen={mobileSidebarOpen}
-        onCloseMobile={() => setMobileSidebarOpen(false)}
-        onSelectConversation={loadConversation}
-        onNewChat={handleNewChat}
-        onDeleteConversation={handleDeleteConversation}
-        onExportConversation={handleExportConversation}
-        onOpenSettings={() => setActiveTab("settings")}
-        onToggleDarkMode={() => setDarkMode((d) => !d)}
-        onLogout={handleLogout}
-      />
-
-      {activeTab === "settings" ? (
-        <SettingsView
-          user={user}
-          models={models}
-          darkMode={darkMode}
-          temperature={temperature}
-          onChangeTemperature={setTemperature}
-          onToggleDarkMode={() => setDarkMode((d) => !d)}
-          onUserUpdated={setUser}
-          onBackToChat={() => setActiveTab("chat")}
-        />
-      ) : (
-        <ChatWorkspace
-          conversation={activeConversation}
-          models={models}
-          streamingContent={streamingContent}
-          isStreaming={isStreaming}
-          temperature={temperature}
-          onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
-          onSendMessage={handleSendMessage}
-          onSwitchModel={handleSwitchModel}
-          onToggleRag={handleToggleRag}
-          onExport={(fmt) =>
-            activeConversation && handleExportConversation(activeConversation.id, fmt)
-          }
-        />
+    <div className="h-screen flex flex-col overflow-hidden">
+      {isDemoMode() && (
+        <div className="bg-brand-500/15 border-b border-brand-500/30 px-4 py-1.5 text-xs flex items-center justify-between text-emerald-700 dark:text-emerald-300">
+          <span>
+            Interactive Live Demo Mode — simulated TinyLlama / Qwen2.5 streaming stored in browser
+            localStorage
+          </span>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="underline font-medium hover:opacity-80"
+          >
+            Exit Demo
+          </button>
+        </div>
       )}
+
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar
+          user={user}
+          conversations={conversations}
+          activeId={activeConversation?.id || null}
+          activeTab={activeTab}
+          darkMode={darkMode}
+          mobileOpen={mobileSidebarOpen}
+          onCloseMobile={() => setMobileSidebarOpen(false)}
+          onSelectConversation={loadConversation}
+          onNewChat={handleNewChat}
+          onDeleteConversation={handleDeleteConversation}
+          onExportConversation={handleExportConversation}
+          onOpenSettings={() => setActiveTab("settings")}
+          onToggleDarkMode={() => setDarkMode((d) => !d)}
+          onLogout={handleLogout}
+        />
+
+        {activeTab === "settings" ? (
+          <SettingsView
+            user={user}
+            models={models}
+            darkMode={darkMode}
+            temperature={temperature}
+            onChangeTemperature={setTemperature}
+            onToggleDarkMode={() => setDarkMode((d) => !d)}
+            onUserUpdated={setUser}
+            onBackToChat={() => setActiveTab("chat")}
+          />
+        ) : (
+          <ChatWorkspace
+            conversation={activeConversation}
+            models={models}
+            streamingContent={streamingContent}
+            isStreaming={isStreaming}
+            temperature={temperature}
+            onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+            onSendMessage={handleSendMessage}
+            onSwitchModel={handleSwitchModel}
+            onToggleRag={handleToggleRag}
+            onExport={(fmt) =>
+              activeConversation && handleExportConversation(activeConversation.id, fmt)
+            }
+          />
+        )}
+      </div>
     </div>
   );
 }

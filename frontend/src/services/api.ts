@@ -1,3 +1,4 @@
+import { demoBackend } from "./demoBackend";
 import type {
   Conversation,
   ConversationDetail,
@@ -9,6 +10,28 @@ import type {
 } from "../types/api";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+
+export function isDemoMode(): boolean {
+  if (import.meta.env.VITE_DEMO_MODE === "true") return true;
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("demo") === "1") return true;
+    if (localStorage.getItem("offline_ai_demo_mode") === "true") return true;
+  }
+  return false;
+}
+
+export function setDemoMode(enabled: boolean): void {
+  if (typeof window !== "undefined") {
+    if (enabled) {
+      localStorage.setItem("offline_ai_demo_mode", "true");
+      localStorage.setItem("auth_token", "demo-jwt-token");
+    } else {
+      localStorage.removeItem("offline_ai_demo_mode");
+      localStorage.removeItem("auth_token");
+    }
+  }
+}
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem("auth_token");
@@ -42,44 +65,77 @@ export const api = {
     username: string;
     password: string;
     full_name?: string;
-  }) => request<User>("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
+  }) =>
+    isDemoMode()
+      ? demoBackend.register(payload)
+      : request<User>("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
 
   login: (username_or_email: string, password: string) =>
-    request<TokenResponse>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username_or_email, password }),
-    }),
+    isDemoMode()
+      ? demoBackend.login()
+      : request<TokenResponse>("/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ username_or_email, password }),
+        }),
 
-  getMe: () => request<User>("/users/me"),
+  getMe: () => (isDemoMode() ? demoBackend.getMe() : request<User>("/users/me")),
 
   updateMe: (payload: { full_name?: string; preferred_model?: string; password?: string }) =>
-    request<User>("/users/me", { method: "PATCH", body: JSON.stringify(payload) }),
+    isDemoMode()
+      ? demoBackend.updateMe(payload)
+      : request<User>("/users/me", { method: "PATCH", body: JSON.stringify(payload) }),
 
-  listUsers: () => request<User[]>("/users"),
+  listUsers: () => (isDemoMode() ? demoBackend.listUsers() : request<User[]>("/users")),
 
   adminUpdateUser: (userId: string, payload: { role?: "user" | "admin"; is_active?: boolean }) =>
-    request<User>(`/users/${userId}`, { method: "PATCH", body: JSON.stringify(payload) }),
+    isDemoMode()
+      ? demoBackend.adminUpdateUser(userId, payload)
+      : request<User>(`/users/${userId}`, { method: "PATCH", body: JSON.stringify(payload) }),
 
-  deleteUser: (userId: string) => request<void>(`/users/${userId}`, { method: "DELETE" }),
+  deleteUser: (userId: string) =>
+    isDemoMode()
+      ? demoBackend.deleteUser(userId)
+      : request<void>(`/users/${userId}`, { method: "DELETE" }),
 
-  listModels: () => request<ModelInfo[]>("/chat/models"),
+  listModels: () =>
+    isDemoMode() ? demoBackend.listModels() : request<ModelInfo[]>("/chat/models"),
 
-  listConversations: () => request<Conversation[]>("/conversations"),
+  listConversations: () =>
+    isDemoMode()
+      ? demoBackend.listConversations()
+      : request<Conversation[]>("/conversations"),
 
   createConversation: (payload: { title?: string; model?: string; use_rag?: boolean }) =>
-    request<Conversation>("/conversations", { method: "POST", body: JSON.stringify(payload) }),
+    isDemoMode()
+      ? demoBackend.createConversation(payload)
+      : request<Conversation>("/conversations", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }),
 
-  getConversation: (id: string) => request<ConversationDetail>(`/conversations/${id}`),
+  getConversation: (id: string) =>
+    isDemoMode()
+      ? demoBackend.getConversation(id)
+      : request<ConversationDetail>(`/conversations/${id}`),
 
   updateConversation: (
     id: string,
     payload: { title?: string; model?: string; system_prompt?: string; use_rag?: boolean }
-  ) => request<Conversation>(`/conversations/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  ) =>
+    isDemoMode()
+      ? demoBackend.updateConversation(id, payload)
+      : request<Conversation>(`/conversations/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        }),
 
   deleteConversation: (id: string) =>
-    request<void>(`/conversations/${id}`, { method: "DELETE" }),
+    isDemoMode()
+      ? demoBackend.deleteConversation(id)
+      : request<void>(`/conversations/${id}`, { method: "DELETE" }),
 
   exportConversation: async (id: string, format: "markdown" | "json") => {
+    if (isDemoMode()) return demoBackend.exportConversation(id, format);
     const res = await fetch(`${API_BASE}/conversations/${id}/export?format=${format}`, {
       headers: getAuthHeaders(),
     });
@@ -98,6 +154,10 @@ export const api = {
     onToken: (token: string) => void,
     onDone: (assistantMessage: Message) => void
   ) => {
+    if (isDemoMode()) {
+      return demoBackend.streamChat(payload, onToken, onDone);
+    }
+
     const res = await fetch(`${API_BASE}/chat`, {
       method: "POST",
       headers: {
@@ -138,9 +198,11 @@ export const api = {
     }
   },
 
-  listDocuments: () => request<RagDocument[]>("/rag/documents"),
+  listDocuments: () =>
+    isDemoMode() ? demoBackend.listDocuments() : request<RagDocument[]>("/rag/documents"),
 
   uploadDocument: async (file: File) => {
+    if (isDemoMode()) return demoBackend.uploadDocument(file);
     const form = new FormData();
     form.append("file", file);
     const res = await fetch(`${API_BASE}/rag/documents`, {
@@ -155,5 +217,8 @@ export const api = {
     return res.json() as Promise<RagDocument>;
   },
 
-  deleteDocument: (id: string) => request<void>(`/rag/documents/${id}`, { method: "DELETE" }),
+  deleteDocument: (id: string) =>
+    isDemoMode()
+      ? demoBackend.deleteDocument(id)
+      : request<void>(`/rag/documents/${id}`, { method: "DELETE" }),
 };

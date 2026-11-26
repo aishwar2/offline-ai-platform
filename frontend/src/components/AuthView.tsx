@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Cpu, Lock, Mail, User as UserIcon } from "lucide-react";
-import { api } from "../services/api";
+import { Lock, Mail, Sparkles, User as UserIcon } from "lucide-react";
+import { api, setDemoMode } from "../services/api";
 
 interface AuthViewProps {
   onAuthSuccess: (token: string) => void;
@@ -38,13 +38,20 @@ export function AuthView({ onAuthSuccess }: AuthViewProps) {
     }
   }
 
+  function handleLaunchDemo() {
+    setDemoMode(true);
+    onAuthSuccess("demo-jwt-token");
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-zinc-950 px-4">
       <div className="w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xl p-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="h-10 w-10 rounded-xl bg-brand-500 text-white flex items-center justify-center">
-            <Cpu className="h-5 w-5" />
-          </div>
+          <img
+            src="./logo.svg"
+            alt="Offline AI Platform Logo"
+            className="h-10 w-10 rounded-xl shadow-sm"
+          />
           <div>
             <h1 className="text-xl font-bold tracking-tight">Offline AI Platform</h1>
             <p className="text-xs text-slate-500 dark:text-zinc-400">
@@ -165,6 +172,17 @@ export function AuthView({ onAuthSuccess }: AuthViewProps) {
                 : "Register & Sign In"}
           </button>
         </form>
+
+        <div className="mt-5 pt-5 border-t border-slate-200 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={handleLaunchDemo}
+            className="w-full py-2.5 rounded-lg border border-brand-500/40 bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-emerald-400 font-medium text-sm flex items-center justify-center gap-2 transition"
+          >
+            <Sparkles className="h-4 w-4" />
+            Launch Interactive Live Demo
+          </button>
+        </div>
       </div>
     </div>
   );

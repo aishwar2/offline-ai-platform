@@ -1,0 +1,84 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "id": null,
+  "title": "Offline AI Platform - Operations & LLM Telemetry",
+  "uid": "offline-ai-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Host CPU Utilization (%)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)",
+          "legendFormat": "CPU %"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Host Memory Utilization (%)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+          "legendFormat": "Memory %"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "API Requests / sec",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(offline_ai_http_requests_total[1m]))",
+          "legendFormat": "req/s"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "API Latency p95 (seconds)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(offline_ai_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "API p95 (s)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "LLM Token Count (Prompt & Completion)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum by (model, token_type) (increase(offline_ai_llm_tokens_total[15m]))",
+          "legendFormat": "{{model}} - {{token_type}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Model Response Time p95 (seconds)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(offline_ai_llm_response_duration_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}} p95 (s)"
+        }
+      ]
+    }
+  ]
+}

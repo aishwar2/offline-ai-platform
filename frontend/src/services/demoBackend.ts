@@ -170,6 +170,19 @@ function saveState(state: DemoState): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function toSummary(conv: ConversationDetail): Conversation {
+  return {
+    id: conv.id,
+    user_id: conv.user_id,
+    title: conv.title,
+    model: conv.model,
+    system_prompt: conv.system_prompt,
+    use_rag: conv.use_rag,
+    created_at: conv.created_at,
+    updated_at: conv.updated_at,
+  };
+}
+
 function generateDemoReply(prompt: string, model: string, useRag: boolean): string {
   const lower = prompt.toLowerCase();
   const ragPrefix = useRag
@@ -274,7 +287,7 @@ export const demoBackend = {
   ],
 
   listConversations: async (): Promise<Conversation[]> =>
-    loadState().conversations.map(({ messages: _m, ...rest }) => rest),
+    loadState().conversations.map(toSummary),
 
   createConversation: async (payload: {
     title?: string;
@@ -296,8 +309,7 @@ export const demoBackend = {
     };
     state.conversations = [conv, ...state.conversations];
     saveState(state);
-    const { messages: _m, ...summary } = conv;
-    return summary;
+    return toSummary(conv);
   },
 
   getConversation: async (id: string): Promise<ConversationDetail> => {
@@ -321,8 +333,7 @@ export const demoBackend = {
     });
     saveState(state);
     if (!updated) throw new Error("Conversation not found");
-    const { messages: _m, ...summary } = updated;
-    return summary;
+    return toSummary(updated);
   },
 
   deleteConversation: async (id: string): Promise<void> => {

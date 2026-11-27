@@ -1,6 +1,7 @@
 """Async client wrapper for local Ollama LLM inference and model discovery."""
 
 import json
+import logging
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -9,6 +10,8 @@ from typing import Any
 import httpx
 
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -57,8 +60,8 @@ class OllamaService:
                         }
                         for item in models
                     ]
-        except httpx.HTTPError:
-            pass
+        except httpx.HTTPError as exc:
+            logger.warning("Ollama /api/tags unavailable, using configured defaults: %s", exc)
 
         return [
             {

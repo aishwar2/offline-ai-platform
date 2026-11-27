@@ -183,35 +183,80 @@ function toSummary(conv: ConversationDetail): Conversation {
   };
 }
 
-function generateDemoReply(prompt: string, model: string, useRag: boolean): string {
-  const lower = prompt.toLowerCase();
-  const ragPrefix = useRag
-    ? "[RAG Context: offline-ai-architecture.md matched]\n\n"
-    : "";
+function generateDemoReply(
+  prompt: string,
+  model: string,
+  useRag: boolean,
+  docs: RagDocument[]
+): string {
+  const trimmed = prompt.trim();
+  const lower = trimmed.toLowerCase();
+
+  // Natural conversational greetings without injecting RAG noise
+  if (/^(hi+|hello+|hey+|hola|namaste|yo|good\s*(morning|afternoon|evening))[\s!?.]*$/i.test(trimmed)) {
+    return (
+      `Hello! I am running in the **Offline AI Platform Live UI Demo** with \`${model}\` selected.\n\n` +
+      `Ask me about:\n` +
+      `• **Architecture & 4 GB RAM optimization** (TinyLlama / Qwen2.5 0.5B)\n` +
+      `• **Docker Compose** or **Kubernetes** deployment\n` +
+      `• **Prometheus & Grafana** monitoring metrics\n` +
+      `• **JWT Auth, RAG, or MCP** tool integration\n\n` +
+      `_(Note: GitHub Pages hosts a static UI simulator. For live local LLM inference, run \`./scripts/setup.sh\` with Docker & Ollama.)_`
+    );
+  }
+
+  const matchedDoc = docs[0]?.filename || "offline-ai-architecture.md";
+  const ragPrefix = useRag ? `[RAG Context: ${matchedDoc} matched]\n\n` : "";
 
   if (lower.includes("docker") || lower.includes("compose")) {
     return (
       ragPrefix +
-      `(${model} demo) You can launch the full stack with \`./scripts/setup.sh\` or \`docker compose up -d --build\`. All containers run as non-root users with strict CPU/RAM caps.`
+      `Launch the full stack locally with \`./scripts/setup.sh\` or \`docker compose up -d --build\`.\n\n` +
+      `All services (PostgreSQL, Ollama, FastAPI, Nginx, Prometheus, Grafana, Node Exporter) run as non-root containers with strict CPU/RAM limits totaling ~3.28 GiB.`
     );
   }
   if (lower.includes("kubernetes") || lower.includes("k8s")) {
     return (
       ragPrefix +
-      `(${model} demo) Deploy to Kubernetes with \`kubectl apply -k kubernetes/\`. Manifests include Namespace, ConfigMap, Secrets, PostgreSQL, Ollama, FastAPI Backend, Nginx Frontend, and Ingress.`
+      `Deploy to Kubernetes with \`kubectl apply -k kubernetes/\`.\n\n` +
+      `Manifests include Namespace, ConfigMap, Secrets, PVCs, PostgreSQL, Ollama, FastAPI Backend, unprivileged Nginx Frontend, and Ingress with liveness/readiness probes.`
     );
   }
   if (lower.includes("model") || lower.includes("qwen") || lower.includes("tinyllama")) {
     return (
       ragPrefix +
-      `(${model} demo) TinyLlama (~637 MB) is configured as default, and Qwen2.5 0.5B (~398 MB) can be switched on the fly from the chat header or Settings.`
+      `You currently have \`${model}\` selected.\n\n` +
+      `• **tinyllama** (~637 MB): Default balanced model for 2 vCPU / 4 GB RAM hosts.\n` +
+      `• **qwen2.5:0.5b** (~398 MB): Ultra-lightweight model for faster CPU token generation.\n\n` +
+      `Switch models anytime from the header dropdown or Settings.`
+    );
+  }
+  if (lower.includes("monitor") || lower.includes("prometheus") || lower.includes("grafana")) {
+    return (
+      ragPrefix +
+      `Observability is built in via \`GET /metrics\`, Prometheus (:9090), Node Exporter (:9100), and Grafana (:3001).\n\n` +
+      `Tracked metrics include host CPU/Memory %, API requests/sec, p95 API latency, prompt/completion token counts, and model response times.`
+    );
+  }
+  if (lower.includes("rag") || lower.includes("pdf") || lower.includes("chroma") || lower.includes("mcp")) {
+    return (
+      ragPrefix +
+      `You can upload PDF, Markdown, or TXT documents in **Settings -> Local Knowledge Base** to index chunks into ChromaDB.\n\n` +
+      `The backend also exposes a JSON-RPC 2.0 MCP server at \`POST /api/v1/rag/mcp\` and a 3-step Plan-Retrieve-Synthesize agent at \`POST /api/v1/rag/agent\`.`
+    );
+  }
+  if (lower.includes("auth") || lower.includes("jwt") || lower.includes("security")) {
+    return (
+      ragPrefix +
+      `Security includes HS256 JWT authentication, bcrypt password hashing, role-based access control (first registered user becomes \`admin\`), sliding-window rate limiting, strict CORS, and non-root containers.`
     );
   }
 
   return (
     ragPrefix +
-    `(${model} live UI demo) Received: "${prompt}".\n\n` +
-    `In a live deployment, FastAPI streams NDJSON tokens from your local Ollama daemon while recording prompt/completion token counts and latency to PostgreSQL and Prometheus.`
+    `Here is a simulated \`${model}\` response to "${trimmed}":\n\n` +
+    `• In this static GitHub Pages demo, responses are simulated client-side and saved in your browser's \`localStorage\`.\n` +
+    `• In a full local deployment (\`./scripts/setup.sh\`), FastAPI streams real NDJSON tokens from Ollama while logging token usage and latency to PostgreSQL and Prometheus.`
   );
 }
 
@@ -390,7 +435,12 @@ export const demoBackend = {
     };
     conv.messages.push(userMsg);
 
-    const reply = generateDemoReply(payload.message, payload.model, Boolean(payload.use_rag));
+    const reply = generateDemoReply(
+      payload.message,
+      payload.model,
+      Boolean(payload.use_rag),
+      state.documents
+    );
     const words = reply.split(" ");
     const start = performance.now();
 
